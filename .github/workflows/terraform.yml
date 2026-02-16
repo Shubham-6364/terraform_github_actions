@@ -5,6 +5,17 @@ on:
     branches:
       - main
   pull_request:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Choose Terraform action"
+        required: true
+        default: "plan"
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
 
 jobs:
   terraform:
@@ -23,7 +34,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-north-1
+          aws-region: ap-south-1
 
       - name: Terraform Init
         run: terraform init
@@ -35,8 +46,13 @@ jobs:
         run: terraform validate
 
       - name: Terraform Plan
+        if: github.event_name == 'push' || github.event_name == 'pull_request' || github.event.inputs.action == 'plan'
         run: terraform plan
 
       - name: Terraform Apply
-        if: github.ref == 'refs/heads/main'
+        if: github.event.inputs.action == 'apply'
         run: terraform apply -auto-approve
+
+      - name: Terraform Destroy
+        if: github.event.inputs.action == 'destroy'
+        run: terraform destroy -auto-approve
